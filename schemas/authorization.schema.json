@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crossplane-authz-lab.local/schemas/authorization.schema.json",
+  "title": "ExecutionAuthorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["authorization_id", "intent_id", "principal", "decision", "operation_digest", "evidence_ids", "state_bindings", "issued_at"],
+  "properties": {
+    "authorization_id": {"type": "string", "minLength": 1},
+    "intent_id": {"type": "string", "minLength": 1},
+    "principal": {"type": "string", "minLength": 1},
+    "decision": {"enum": ["ALLOW", "DENY", "INSUFFICIENT_EVIDENCE", "BOUNDED_EXECUTION"]},
+    "operation_digest": {"type": "string", "minLength": 1},
+    "evidence_ids": {"type": "array", "items": {"type": "string"}},
+    "state_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["subject", "digest"],
+        "properties": {
+          "subject": {"type": "string"},
+          "digest": {"type": "string"}
+        }
+      }
+    },
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "bounded_effects": {"type": "array", "items": {"type": "string"}}
+  }
+}
