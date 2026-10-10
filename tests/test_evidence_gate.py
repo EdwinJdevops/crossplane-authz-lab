@@ -31,7 +31,7 @@ class EvidenceGateTests(unittest.TestCase):
 
     def test_matching_asserted_identity_and_replay(self):
         identity = CollectorIdentity('collector-A', True, 'test-only-assertion')
-        self.assertTrue(self.check(identity).accepted)
+        self.assertEqual(self.check(identity).reason, 'INDEPENDENT_COLLECTOR_ATTESTATION_REQUIRED')
         self.assertEqual(self.check(identity).reason, 'REPLAY_DETECTED')
 
     def test_bad_signature(self):
