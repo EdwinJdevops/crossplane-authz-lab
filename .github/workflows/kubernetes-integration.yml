@@ -36,3 +36,14 @@ jobs:
         run: |
           python -m pip install -e . kubernetes
           PYTHONPATH=src python scripts/collect_kubernetes_identity.py --namespace cpal-experiment --pod cpal-target
+
+      - name: Verify projected token from inside disposable cluster
+        run: |
+          kubectl apply -f deploy/kubernetes/token-collector-job.yaml
+          kubectl wait -n cpal-experiment --for=condition=complete job/cpal-token-check --timeout=180s || {
+            kubectl describe -n cpal-experiment job/cpal-token-check
+            kubectl get -n cpal-experiment pods -l job-name=cpal-token-check -o wide
+            kubectl logs -n cpal-experiment job/cpal-token-check --all-containers=true || true
+            exit 1
+          }
+          kubectl logs -n cpal-experiment job/cpal-token-check
