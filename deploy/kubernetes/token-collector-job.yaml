@@ -26,7 +26,7 @@ spec:
               if kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get pod other-pod -n cpal-experiment >/dev/null 2>&1; then
                 echo 'Unexpected permission to read other-pod' >&2; exit 1
               fi
-              if kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" list pods -n cpal-experiment >/dev/null 2>&1; then
+              if kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get pods -n cpal-experiment >/dev/null 2>&1; then
                 echo 'Unexpected list permission' >&2; exit 1
               fi
               echo 'Projected token positive and negative checks passed'
