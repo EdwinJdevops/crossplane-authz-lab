@@ -61,10 +61,11 @@ spec:
               - serviceAccountToken:
                   path: verifier-token
                   expirationSeconds: 600
-              - serviceAccountToken:
-                  path: collector-token
-                  audience: cpal-collector-verification
-                  expirationSeconds: 600
+              - secret:
+                  name: cpal-ci-collector-token
+                  items:
+                    - key: token
+                      path: collector-token
               - configMap:
                   name: kube-root-ca.crt
                   items:
