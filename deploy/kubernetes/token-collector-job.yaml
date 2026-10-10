@@ -13,23 +13,43 @@ spec:
       restartPolicy: Never
       containers:
         - name: token-check
-          image: registry.k8s.io/kubectl:v1.33.0
+          image: python:3.12-alpine
           imagePullPolicy: IfNotPresent
-          command: ['/bin/sh', '-ec']
+          command: ['python', '-c']
           args:
             - |
-              token=/var/run/secrets/cpal/token
-              ca=/var/run/secrets/cpal/ca.crt
-              server="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
-              kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get pod cpal-target -n cpal-experiment -o name
-              kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get serviceaccount cpal-target-sa -n cpal-experiment -o name
-              if kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get pod other-pod -n cpal-experiment >/dev/null 2>&1; then
-                echo 'Unexpected permission to read other-pod' >&2; exit 1
-              fi
-              if kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get pods -n cpal-experiment >/dev/null 2>&1; then
-                echo 'Unexpected list permission' >&2; exit 1
-              fi
-              echo 'Projected token positive and negative checks passed'
+              import json
+              import os
+              import ssl
+              import urllib.error
+              import urllib.request
+
+              base = 'https://{}:{}'.format(os.environ['KUBERNETES_SERVICE_HOST'], os.environ['KUBERNETES_SERVICE_PORT'])
+              with open('/var/run/secrets/cpal/token', encoding='utf-8') as f:
+                  token = f.read().strip()
+              context = ssl.create_default_context(cafile='/var/run/secrets/cpal/ca.crt')
+
+              def check(path, expected, name):
+                  request = urllib.request.Request(base + path, headers={'Authorization': 'Bearer ' + token})
+                  try:
+                      with urllib.request.urlopen(request, context=context, timeout=10) as response:
+                          status = response.status
+                          body = json.load(response)
+                  except urllib.error.HTTPError as exc:
+                      status = exc.code
+                      body = json.load(exc)
+                  if status != expected:
+                      raise RuntimeError('{}: expected HTTP {}, observed HTTP {}: {}'.format(name, expected, status, body))
+                  if status == 200 and body.get('metadata', {}).get('name') != name:
+                      raise RuntimeError('{}: unexpected returned resource'.format(name))
+                  print('{}: HTTP {}'.format(name, status), flush=True)
+
+              prefix = '/api/v1/namespaces/cpal-experiment'
+              check(prefix + '/pods/cpal-target', 200, 'cpal-target')
+              check(prefix + '/serviceaccounts/cpal-target-sa', 200, 'cpal-target-sa')
+              check(prefix + '/pods/other-pod', 403, 'other-pod')
+              check(prefix + '/pods', 403, 'pod-list')
+              print('Projected-token authentication and authorization controls passed', flush=True)
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
