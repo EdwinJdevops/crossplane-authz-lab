@@ -7,6 +7,8 @@ on:
       - 'deploy/kubernetes/**'
       - 'scripts/check_kubernetes_rbac.sh'
       - 'scripts/collect_kubernetes_identity.py'
+      - 'scripts/check_live_tokenreview_client.py'
+      - 'src/cpal/tokenreview_*.py'
       - 'src/cpal/kubernetes_*.py'
       - '.github/workflows/kubernetes-integration.yml'
   workflow_dispatch:
@@ -69,3 +71,6 @@ jobs:
           }
           kubectl logs -n cpal-experiment job/cpal-tokenreview-check
           kubectl -n cpal-experiment delete secret cpal-ci-collector-token
+
+      - name: Exercise verifier-owned TokenReview client against kind
+        run: PYTHONPATH=src python scripts/check_live_tokenreview_client.py
