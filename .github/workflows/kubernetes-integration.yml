@@ -54,3 +54,18 @@ jobs:
           kubectl auth can-i create tokenreviews.authentication.k8s.io --as=system:serviceaccount:cpal-experiment:cpal-token-verifier | grep -x yes
           kubectl auth can-i create tokenreviews.authentication.k8s.io --as=system:serviceaccount:cpal-experiment:cpal-collector | grep -x no
           kubectl auth can-i get secrets -n cpal-experiment --as=system:serviceaccount:cpal-experiment:cpal-token-verifier | grep -x no
+
+      - name: Verify live collector TokenReview
+        run: |
+          set -euo pipefail
+          TOKEN="$(kubectl -n cpal-experiment create token cpal-collector --audience=cpal-collector-verification --duration=10m)"
+          kubectl -n cpal-experiment create secret generic cpal-ci-collector-token --from-literal=token="$TOKEN"
+          unset TOKEN
+          kubectl apply -f deploy/kubernetes/tokenreview-live-job.yaml
+          kubectl wait -n cpal-experiment --for=condition=complete job/cpal-tokenreview-check --timeout=180s || {
+            kubectl describe -n cpal-experiment job/cpal-tokenreview-check
+            kubectl logs -n cpal-experiment job/cpal-tokenreview-check || true
+            exit 1
+          }
+          kubectl logs -n cpal-experiment job/cpal-tokenreview-check
+          kubectl -n cpal-experiment delete secret cpal-ci-collector-token
