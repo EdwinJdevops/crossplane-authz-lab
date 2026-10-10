@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cpal-experiment
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cpal-collector
+  namespace: cpal-experiment
+automountServiceAccountToken: false
+---
+# The named target Pod and ServiceAccount must exist in this namespace.
+# ResourceNames constrain reads to these two objects; no list/watch/write.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cpal-collector-read
+  namespace: cpal-experiment
+rules:
+  - apiGroups: ['']
+    resources: ['pods']
+    resourceNames: ['cpal-target']
+    verbs: ['get']
+  - apiGroups: ['']
+    resources: ['serviceaccounts']
+    resourceNames: ['cpal-target-sa']
+    verbs: ['get']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cpal-collector-read
+  namespace: cpal-experiment
+subjects:
+  - kind: ServiceAccount
+    name: cpal-collector
+    namespace: cpal-experiment
+roleRef:
+  kind: Role
+  name: cpal-collector-read
+  apiGroup: rbac.authorization.k8s.io
