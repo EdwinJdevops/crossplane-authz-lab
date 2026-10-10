@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cpal-token-check
+  namespace: cpal-experiment
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 0
+  template:
+    spec:
+      serviceAccountName: cpal-collector
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      containers:
+        - name: token-check
+          image: bitnami/kubectl:1.33
+          imagePullPolicy: IfNotPresent
+          command: ['/bin/sh', '-ec']
+          args:
+            - |
+              token=/var/run/secrets/cpal/token
+              ca=/var/run/secrets/cpal/ca.crt
+              server="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
+              kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get pod cpal-target -n cpal-experiment -o name
+              kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get serviceaccount cpal-target-sa -n cpal-experiment -o name
+              if kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" get pod other-pod -n cpal-experiment >/dev/null 2>&1; then
+                echo 'Unexpected permission to read other-pod' >&2; exit 1
+              fi
+              if kubectl --server="$server" --certificate-authority="$ca" --token="$(cat "$token")" list pods -n cpal-experiment >/dev/null 2>&1; then
+                echo 'Unexpected list permission' >&2; exit 1
+              fi
+              echo 'Projected token positive and negative checks passed'
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']
+            runAsNonRoot: true
+            runAsUser: 1001
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: token
+              mountPath: /var/run/secrets/cpal
+              readOnly: true
+      volumes:
+        - name: token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 600
+                  audience: https://kubernetes.default.svc
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
