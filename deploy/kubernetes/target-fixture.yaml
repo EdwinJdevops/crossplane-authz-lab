@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cpal-target-sa
+  namespace: cpal-experiment
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cpal-target
+  namespace: cpal-experiment
+spec:
+  serviceAccountName: cpal-target-sa
+  automountServiceAccountToken: false
+  restartPolicy: Never
+  containers:
+    - name: sleeper
+      image: registry.k8s.io/pause:3.10
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ['ALL']
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
