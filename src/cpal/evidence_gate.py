@@ -25,7 +25,7 @@ class EvidenceDecision:
 def evaluate_evidence(payload, signature, secret, *, identity: CollectorIdentity | None, expected_principal: str, ledger, execution_id: str, state_digest: str, policy_digest: str, nonce: str, now: int | None = None) -> EvidenceDecision:
     if identity is None or not identity.authenticated or not identity.principal or not identity.source:
         return EvidenceDecision(False, 'UNAUTHENTICATED_COLLECTOR')
-    if identity.principal != expected_principal or payload.get('collector') != expected_principal:
+    if not isinstance(payload, dict) or identity.principal != expected_principal or payload.get('collector') != expected_principal:
         return EvidenceDecision(False, 'COLLECTOR_IDENTITY_MISMATCH')
     # Identity assertions are not trusted merely because they are instances of this dataclass.
     # Production callers MUST establish the identity via an independent trusted verifier.
