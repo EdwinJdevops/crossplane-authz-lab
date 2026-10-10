@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cpal-tokenreview-check
+  namespace: cpal-experiment
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: cpal-token-verifier
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      containers:
+        - name: verify
+          image: python:3.12-alpine
+          command: ['python', '-c']
+          args:
+            - |
+              import json, os, ssl, urllib.request, urllib.error
+              base = 'https://{}:{}'.format(os.environ['KUBERNETES_SERVICE_HOST'], os.environ['KUBERNETES_SERVICE_PORT'])
+              context = ssl.create_default_context(cafile='/var/run/secrets/cpal/ca.crt')
+              def token(path):
+                  with open(path, encoding='utf-8') as f: return f.read().strip()
+              verifier_token = token('/var/run/secrets/cpal/verifier-token')
+              collector_token = token('/var/run/secrets/cpal/collector-token')
+              def review(candidate, audience):
+                  body = json.dumps({'apiVersion':'authentication.k8s.io/v1','kind':'TokenReview','spec':{'token':candidate,'audiences':[audience]}}).encode()
+                  request = urllib.request.Request(base + '/apis/authentication.k8s.io/v1/tokenreviews', data=body, headers={'Authorization':'Bearer '+verifier_token,'Content-Type':'application/json'}, method='POST')
+                  with urllib.request.urlopen(request, context=context, timeout=10) as response:
+                      if response.status != 201: raise RuntimeError('TokenReview create failed')
+                      return json.load(response)['status']
+              audience = 'cpal-collector-verification'
+              good = review(collector_token, audience)
+              expected = 'system:serviceaccount:cpal-experiment:cpal-collector'
+              if not good.get('authenticated') or good.get('user',{}).get('username') != expected or audience not in good.get('audiences',[]):
+                  raise RuntimeError('Collector identity/audience verification failed: '+str(good))
+              print('collector identity and audience: authenticated', flush=True)
+              wrong_audience = review(collector_token, 'cpal-unrelated-audience')
+              if wrong_audience.get('authenticated'): raise RuntimeError('Wrong audience accepted')
+              print('wrong audience: rejected', flush=True)
+              bad = review('invalid-token-value', audience)
+              if bad.get('authenticated'): raise RuntimeError('Invalid token accepted')
+              print('invalid token: rejected', flush=True)
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: tokens
+              mountPath: /var/run/secrets/cpal
+              readOnly: true
+      volumes:
+        - name: tokens
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: verifier-token
+                  expirationSeconds: 600
+              - serviceAccountToken:
+                  path: collector-token
+                  audience: cpal-collector-verification
+                  expirationSeconds: 600
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
