@@ -27,9 +27,9 @@ def evaluate_evidence(payload, signature, secret, *, identity: CollectorIdentity
         return EvidenceDecision(False, 'UNAUTHENTICATED_COLLECTOR')
     if not isinstance(payload, dict) or identity.principal != expected_principal or payload.get('collector') != expected_principal:
         return EvidenceDecision(False, 'COLLECTOR_IDENTITY_MISMATCH')
-    # Identity assertions are not trusted merely because they are instances of this dataclass.
-    # Production callers MUST establish the identity via an independent trusted verifier.
+    # An asserted identity is not independently authenticated. Do not allow it
+    # to promote locally valid evidence into an authorization-grade decision.
     verification = verify_with_ledger(payload, signature, secret, ledger=ledger, execution_id=execution_id, state_digest=state_digest, policy_digest=policy_digest, nonce=nonce, now=now)
     if not verification.accepted:
         return EvidenceDecision(False, verification.reason)
-    return EvidenceDecision(True, 'LOCAL_EVIDENCE_VALID_IDENTITY_ASSERTED')
+    return EvidenceDecision(False, 'INDEPENDENT_COLLECTOR_ATTESTATION_REQUIRED')
