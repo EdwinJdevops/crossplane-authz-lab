@@ -28,5 +28,5 @@ def evaluate_trusted_probe(
     if not provenance.collector_identity.strip() or not provenance.execution_id.strip():
         return ProbeVerdict.INSUFFICIENT_EVIDENCE
     # A caller-constructed provenance object is not a security boundary.
-    # Only invoke from a trusted collector after transport authentication.
-    return interpret_probe(report, expected)
+    # No authenticated collector exists in this repository yet.
+    return ProbeVerdict.INSUFFICIENT_EVIDENCE
