@@ -50,3 +50,17 @@ def verify(payload: dict, signature: str, secret: bytes, *, execution_id: str, s
         return Verification(False, "INVALID_SIGNATURE")
     consumed_nonces.add(nonce)
     return Verification(True, "MAC_VALID_LOCAL_ONLY")
+
+
+def verify_with_ledger(payload: dict, signature: str, secret: bytes, *, ledger, execution_id: str, state_digest: str, policy_digest: str, nonce: str, now: int | None = None) -> Verification:
+    """Verify first, then atomically consume nonce; fail closed on storage errors."""
+    current = int(time.time()) if now is None else now
+    result = verify(payload, signature, secret, execution_id=execution_id, state_digest=state_digest, policy_digest=policy_digest, nonce=nonce, now=current, consumed_nonces=set())
+    if not result.accepted:
+        return result
+    try:
+        if not ledger.consume(nonce, payload['expires_at'], current):
+            return Verification(False, 'REPLAY_DETECTED')
+    except Exception:
+        return Verification(False, 'REPLAY_STORE_UNAVAILABLE')
+    return Verification(True, 'MAC_VALID_LOCAL_DURABLE_REPLAY')
