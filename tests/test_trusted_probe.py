@@ -21,9 +21,9 @@ class TrustedProbeTests(unittest.TestCase):
                 p = ProbeProvenance(True, identity, execution)
                 self.assertEqual(evaluate_trusted_probe(REPORT, EXPECTED, p), ProbeVerdict.INSUFFICIENT_EVIDENCE)
 
-    def test_verified_transport_flag_allows_interpretation_only(self):
+    def test_caller_supplied_authenticated_flag_cannot_grant_trust(self):
         p = ProbeProvenance(True, 'collector', 'run-1')
-        self.assertEqual(evaluate_trusted_probe(REPORT, EXPECTED, p), ProbeVerdict.VERIFIED_READ)
+        self.assertEqual(evaluate_trusted_probe(REPORT, EXPECTED, p), ProbeVerdict.INSUFFICIENT_EVIDENCE)
 
 if __name__ == '__main__':
     unittest.main()
