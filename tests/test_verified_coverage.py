@@ -26,7 +26,7 @@ class VerifiedCoverageTests(unittest.TestCase):
 
     def test_gate_never_allows_based_only_on_manifest_graph(self):
         result = assess_e1_coverage(self.objects, 'api', 'prod')
-        subjects = sorted(result.coverage.required_subjects)
+        subjects = sorted(result.coverage.required_subjects) or ['synthetic:unrelated']
         auth = BoundAuthorization('a', digest_state('operation'), tuple(
             Evidence(str(i), subject, digest_state(subject)) for i, subject in enumerate(subjects)))
         current = {subject: digest_state(subject) for subject in subjects}
