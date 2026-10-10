@@ -1,0 +1,38 @@
+name: Kubernetes integration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/kubernetes/**'
+      - 'scripts/check_kubernetes_rbac.sh'
+      - 'scripts/collect_kubernetes_identity.py'
+      - 'src/cpal/kubernetes_*.py'
+      - '.github/workflows/kubernetes-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kind-rbac:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: cpal-ci
+      - name: Apply isolated fixtures and RBAC
+        run: |
+          kubectl apply -f deploy/kubernetes/collector-rbac.yaml
+          kubectl apply -f deploy/kubernetes/target-fixture.yaml
+      - name: Assert allowed and denied RBAC operations
+        run: bash scripts/check_kubernetes_rbac.sh
+      - name: Collect Kubernetes identity from real API server
+        run: |
+          python -m pip install -e . kubernetes
+          PYTHONPATH=src python scripts/collect_kubernetes_identity.py --namespace cpal-experiment --pod cpal-target
