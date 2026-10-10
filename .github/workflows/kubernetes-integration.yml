@@ -30,6 +30,7 @@ jobs:
         run: |
           kubectl apply -f deploy/kubernetes/collector-rbac.yaml
           kubectl apply -f deploy/kubernetes/target-fixture.yaml
+          kubectl apply -f deploy/kubernetes/tokenreview-verifier-rbac.yaml
       - name: Assert allowed and denied RBAC operations
         run: bash scripts/check_kubernetes_rbac.sh
       - name: Collect Kubernetes identity from real API server
@@ -47,3 +48,9 @@ jobs:
             exit 1
           }
           kubectl logs -n cpal-experiment job/cpal-token-check
+
+      - name: Assert TokenReview privilege isolation
+        run: |
+          kubectl auth can-i create tokenreviews.authentication.k8s.io --as=system:serviceaccount:cpal-experiment:cpal-token-verifier | grep -x yes
+          kubectl auth can-i create tokenreviews.authentication.k8s.io --as=system:serviceaccount:cpal-experiment:cpal-collector | grep -x no
+          kubectl auth can-i get secrets -n cpal-experiment --as=system:serviceaccount:cpal-experiment:cpal-token-verifier | grep -x no
