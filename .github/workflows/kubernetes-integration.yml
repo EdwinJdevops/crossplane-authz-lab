@@ -11,6 +11,8 @@ on:
       - 'scripts/check_live_verified_report.py'
       - 'scripts/check_live_challenge_report.py'
       - 'scripts/check_live_http_report.py'
+      - 'scripts/check_tls_handshake.py'
+      - 'src/cpal/report_tls.py'
       - 'src/cpal/report_http.py'
       - 'src/cpal/report_handler.py'
       - 'src/cpal/challenge_store.py'
@@ -92,3 +94,6 @@ jobs:
 
       - name: Exercise loopback HTTP verifier against live kind TokenReview
         run: PYTHONPATH=src python scripts/check_live_http_report.py
+
+      - name: Verify real TLS handshake and untrusted certificate rejection
+        run: PYTHONPATH=src python scripts/check_tls_handshake.py
