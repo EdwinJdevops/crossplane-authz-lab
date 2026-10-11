@@ -9,6 +9,9 @@ on:
       - 'scripts/collect_kubernetes_identity.py'
       - 'scripts/check_live_tokenreview_client.py'
       - 'scripts/check_live_verified_report.py'
+      - 'scripts/check_live_challenge_report.py'
+      - 'src/cpal/challenge_store.py'
+      - 'src/cpal/challenge_verified_report.py'
       - 'src/cpal/verified_report.py'
       - 'src/cpal/report_challenge.py'
       - 'src/cpal/tokenreview_*.py'
@@ -80,3 +83,6 @@ jobs:
 
       - name: Exercise composed report verifier against live kind API
         run: PYTHONPATH=src python scripts/check_live_verified_report.py
+
+      - name: Verify server-owned challenge against live kind TokenReview
+        run: PYTHONPATH=src python scripts/check_live_challenge_report.py
