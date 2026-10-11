@@ -8,6 +8,9 @@ on:
       - 'scripts/check_kubernetes_rbac.sh'
       - 'scripts/collect_kubernetes_identity.py'
       - 'scripts/check_live_tokenreview_client.py'
+      - 'scripts/check_live_verified_report.py'
+      - 'src/cpal/verified_report.py'
+      - 'src/cpal/report_challenge.py'
       - 'src/cpal/tokenreview_*.py'
       - 'src/cpal/kubernetes_*.py'
       - '.github/workflows/kubernetes-integration.yml'
@@ -74,3 +77,6 @@ jobs:
 
       - name: Exercise verifier-owned TokenReview client against kind
         run: PYTHONPATH=src python scripts/check_live_tokenreview_client.py
+
+      - name: Exercise composed report verifier against live kind API
+        run: PYTHONPATH=src python scripts/check_live_verified_report.py
