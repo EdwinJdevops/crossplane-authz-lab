@@ -26,7 +26,15 @@ def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expe
             if not auth.startswith('Bearer ') or not auth[7:]:
                 self.send_error(401)
                 return
-            body = self.rfile.read(int(length))
+            self.connection.settimeout(5)
+            try:
+                body = self.rfile.read(int(length))
+            except (TimeoutError, OSError):
+                self.close_connection = True
+                return
+            if len(body) != int(length):
+                self.close_connection = True
+                return
             result = handle_submission(body=body, bearer_token=auth[7:], api_url=api_url, cluster_ca=cluster_ca, verifier_token=verifier_token, expected_username=expected_username, expected_uid=expected_uid, audience=audience, challenge_store=challenge_store, now=int(time.time()))
             payload = json.dumps({'accepted':result.accepted, 'reason':result.reason}).encode()
             self.send_response(200 if result.accepted else 403)
