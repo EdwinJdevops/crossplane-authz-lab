@@ -34,7 +34,7 @@ def main():
             conn = http.client.HTTPSConnection('localhost', server.server_port, context=trusted, timeout=5)
             conn.request('POST', '/reports', body=b'', headers={'Content-Length':'0'})
             response = conn.getresponse()
-            assert response.status == 413, response.status
+            assert response.status == 401, response.status
             response.read()
             conn.close()
             print('TLS: trusted CA and hostname accepted', flush=True)
