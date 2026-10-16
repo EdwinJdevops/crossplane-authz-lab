@@ -14,7 +14,7 @@ kubectl -n "$ns" create configmap cpal-verifier-runtime --from-literal=collector
 kubectl -n "$ns" create configmap cpal-verifier-code \
   --from-file=scripts/run_verifier.py \
   --from-file=src/cpal/report_tls.py --from-file=src/cpal/report_http.py \
-  --from-file=src/cpal/report_handler.py --from-file=src/cpal/report_protocol.py \
+  --from-file=src/cpal/report_handler.py --from-file=src/cpal/independent_pod_observation.py --from-file=src/cpal/report_protocol.py \
   --from-file=src/cpal/challenge_issuer.py --from-file=src/cpal/challenge_store.py \
   --from-file=src/cpal/challenge_verified_report.py --from-file=src/cpal/tokenreview_client.py \
   --from-file=src/cpal/tokenreview_result.py
