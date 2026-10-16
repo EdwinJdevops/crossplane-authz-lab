@@ -22,6 +22,7 @@ class ChallengeStore:
     def __init__(self, path: str):
         self.path = path
         with sqlite3.connect(path, timeout=10) as db:
+            db.execute('PRAGMA busy_timeout=10000')
             db.execute('CREATE TABLE IF NOT EXISTS challenges (nonce TEXT PRIMARY KEY, principal TEXT NOT NULL, execution_id TEXT NOT NULL, expires_at INTEGER NOT NULL, consumed INTEGER NOT NULL DEFAULT 0)')
 
     def issue(self, *, principal: str, execution_id: str, now: int | None = None, ttl: int = 120) -> Challenge:
@@ -30,12 +31,14 @@ class ChallengeStore:
         issued = int(time.time()) if now is None else now
         challenge = Challenge(secrets.token_urlsafe(32), principal, execution_id, issued + ttl)
         with sqlite3.connect(self.path, timeout=10) as db:
+            db.execute('PRAGMA busy_timeout=10000')
             db.execute('INSERT INTO challenges (nonce,principal,execution_id,expires_at) VALUES (?,?,?,?)', (challenge.nonce, challenge.principal, challenge.execution_id, challenge.expires_at))
         return challenge
 
     def consume(self, *, nonce: str, principal: str, execution_id: str, now: int | None = None) -> bool:
         instant = int(time.time()) if now is None else now
         with sqlite3.connect(self.path, timeout=10, isolation_level=None) as db:
+            db.execute('PRAGMA busy_timeout=10000')
             db.execute('BEGIN IMMEDIATE')
             cursor = db.execute('UPDATE challenges SET consumed=1 WHERE nonce=? AND principal=? AND execution_id=? AND expires_at>? AND consumed=0', (nonce, principal, execution_id, instant))
             db.execute('COMMIT')
