@@ -21,7 +21,7 @@ def issue_authenticated_challenge(*, candidate_token, api_url, cluster_ca, verif
     if not isinstance(candidate_token, str) or not candidate_token.strip():
         return ChallengeIssueResult(False, 'MISSING_BEARER_TOKEN')
     authentication = authenticate_collector(api_url=api_url, cluster_ca=cluster_ca, verifier_token=verifier_token, candidate_token=candidate_token, expected_username=expected_username, expected_uid=expected_uid, audience=audience)
-    if not authentication.authenticated:
+    if not authentication.authenticated or authentication.principal != expected_username:
         return ChallengeIssueResult(False, 'COLLECTOR_NOT_AUTHENTICATED')
     execution_id = secrets.token_urlsafe(24)
     try:
