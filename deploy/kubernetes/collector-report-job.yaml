@@ -74,3 +74,6 @@ spec:
         - name: code
           configMap:
             name: cpal-collector-code
+            items:
+              - {key: run_collector.py, path: scripts/run_collector.py}
+              - {key: collector_submit.py, path: src/cpal/collector_submit.py}
