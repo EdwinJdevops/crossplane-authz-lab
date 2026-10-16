@@ -18,11 +18,20 @@ class InvalidSubmission(ValueError):
     pass
 
 
+def _reject_duplicate_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate JSON key')
+        result[key] = value
+    return result
+
+
 def parse_submission(body: bytes) -> tuple[bytes, dict]:
     if not isinstance(body, bytes) or len(body) > MAX_REQUEST_BYTES:
         raise InvalidSubmission('INVALID_REQUEST_SIZE')
     try:
-        obj = json.loads(body)
+        obj = json.loads(body, parse_constant=lambda value: (_ for _ in ()).throw(ValueError('non-finite JSON constant')), object_pairs_hook=_reject_duplicate_keys)
     except (UnicodeDecodeError, ValueError) as exc:
         raise InvalidSubmission('INVALID_JSON') from exc
     if not isinstance(obj, dict) or set(obj) != ALLOWED_KEYS:
