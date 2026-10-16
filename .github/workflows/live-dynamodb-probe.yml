@@ -1,0 +1,36 @@
+name: Live DynamoDB probe
+on:
+  workflow_dispatch:
+    inputs:
+      table_name:
+        description: 'Dedicated disposable DynamoDB table (never production)'
+        required: true
+        type: string
+      aws_region:
+        description: 'Region containing the dedicated table'
+        required: true
+        default: us-east-1
+        type: string
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  live-probe:
+    environment: cpal-staging-aws
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Configure scoped staging credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.CPAL_STAGING_PROBE_ROLE_ARN }}
+          aws-region: ${{ inputs.aws_region }}
+      - name: Run live concurrency and replay probe
+        env:
+          CPAL_DYNAMODB_CHALLENGE_TABLE: ${{ inputs.table_name }}
+        run: |
+          python -m pip install -e . boto3
+          python scripts/dynamodb_live_probe.py
