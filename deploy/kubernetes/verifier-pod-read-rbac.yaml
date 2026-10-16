@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cpal-verifier-observe-pod
+  namespace: cpal-experiment
+rules:
+  - apiGroups: ['']
+    resources: [pods]
+    resourceNames: [cpal-target]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cpal-verifier-observe-pod
+  namespace: cpal-experiment
+subjects:
+  - kind: ServiceAccount
+    name: cpal-token-verifier
+    namespace: cpal-experiment
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cpal-verifier-observe-pod
