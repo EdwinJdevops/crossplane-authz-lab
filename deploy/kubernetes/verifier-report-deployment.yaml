@@ -76,6 +76,17 @@ spec:
         - name: source
           configMap:
             name: cpal-verifier-code
+            items:
+              - {key: run_verifier.py, path: scripts/run_verifier.py}
+              - {key: report_tls.py, path: src/cpal/report_tls.py}
+              - {key: report_http.py, path: src/cpal/report_http.py}
+              - {key: report_handler.py, path: src/cpal/report_handler.py}
+              - {key: report_protocol.py, path: src/cpal/report_protocol.py}
+              - {key: challenge_issuer.py, path: src/cpal/challenge_issuer.py}
+              - {key: challenge_store.py, path: src/cpal/challenge_store.py}
+              - {key: challenge_verified_report.py, path: src/cpal/challenge_verified_report.py}
+              - {key: tokenreview_client.py, path: src/cpal/tokenreview_client.py}
+              - {key: tokenreview_result.py, path: src/cpal/tokenreview_result.py}
         - name: verifier-token
           projected:
             sources:
