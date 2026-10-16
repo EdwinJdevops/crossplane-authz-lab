@@ -20,9 +20,18 @@ spec:
         - name: collector
           image: python:3.12-slim
           command: [python, /opt/cpal/scripts/run_collector.py]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
           env:
             - name: PYTHONPATH
               value: /opt/cpal/src
+            - name: PYTHONDONTWRITEBYTECODE
+              value: '1'
             - name: CPAL_KUBERNETES_URL
               value: https://kubernetes.default.svc
             - name: CPAL_KUBERNETES_CA
