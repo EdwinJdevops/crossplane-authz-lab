@@ -32,8 +32,10 @@ def collect_and_submit(*, kubernetes_url, kubernetes_ca, token_path, kubernetes_
         headers = {'Authorization': 'Bearer ' + bearer, 'Accept': 'application/json'}
         if data is not None:
             headers['Content-Type'] = 'application/json'
+        if not url.startswith('https://'):
+            raise ValueError('HTTPS required')
         req = urllib.request.Request(url, headers=headers, data=data, method=method)
-        with urllib.request.urlopen(req, context=context, timeout=timeout) as response:
+        with urllib.request.build_opener(urllib.request.HTTPSHandler(context=context)).open(req, timeout=timeout) as response:
             return json.load(response)
 
     challenge = request(verifier_url.rstrip('/') + '/challenge', verifier_context, token, 'POST', b'')
