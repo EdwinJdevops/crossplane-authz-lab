@@ -13,7 +13,7 @@ from cpal.report_handler import handle_submission
 from cpal.report_protocol import MAX_REQUEST_BYTES
 
 
-def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expected_uid, audience, challenge_store, verifier_token_path=None):
+def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expected_uid, audience, challenge_store, verifier_token_path=None, observation_namespace=None, observation_pod=None):
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
             if self.path not in ('/reports', '/challenge'):
@@ -53,7 +53,7 @@ def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expe
                 if result.accepted:
                     response.update(nonce=result.nonce, execution_id=result.execution_id, expires_at=result.expires_at)
             else:
-                result = handle_submission(body=body, bearer_token=auth[7:], **config)
+                result = handle_submission(body=body, bearer_token=auth[7:], observation_namespace=observation_namespace, observation_pod=observation_pod, **config)
                 response = {'accepted': result.accepted, 'reason': result.reason}
             payload = json.dumps(response).encode()
             self.send_response(200 if result.accepted else 403)
