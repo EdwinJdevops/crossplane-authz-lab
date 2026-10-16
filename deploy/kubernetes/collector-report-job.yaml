@@ -1,0 +1,74 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cpal-report-collector
+  namespace: cpal-experiment
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: cpal-collector
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: collector
+          image: python:3.12-slim
+          command: [python, /opt/cpal/scripts/run_collector.py]
+          env:
+            - name: CPAL_KUBERNETES_URL
+              value: https://kubernetes.default.svc
+            - name: CPAL_KUBERNETES_CA
+              value: /var/run/secrets/cpal/kubernetes-ca/ca.crt
+            - name: CPAL_COLLECTOR_TOKEN_PATH
+              value: /var/run/secrets/cpal/token/token
+            - name: CPAL_NAMESPACE
+              value: cpal-experiment
+            - name: CPAL_TARGET_POD
+              value: cpal-target
+            - name: CPAL_COLLECTOR_SERVICE_ACCOUNT
+              value: cpal-collector
+            - name: CPAL_VERIFIER_URL
+              value: https://cpal-verifier.cpal-experiment.svc:8443
+            - name: CPAL_VERIFIER_CA
+              value: /var/run/secrets/cpal/verifier-ca/ca.crt
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: collector-token
+              mountPath: /var/run/secrets/cpal/token
+              readOnly: true
+            - name: kubernetes-ca
+              mountPath: /var/run/secrets/cpal/kubernetes-ca
+              readOnly: true
+            - name: verifier-ca
+              mountPath: /var/run/secrets/cpal/verifier-ca
+              readOnly: true
+            - name: code
+              mountPath: /opt/cpal
+              readOnly: true
+      volumes:
+        - name: collector-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 600
+                  audience: cpal-collector-verification
+        - name: kubernetes-ca
+          configMap:
+            name: kube-root-ca.crt
+        - name: verifier-ca
+          configMap:
+            name: cpal-verifier-ca
+        - name: code
+          configMap:
+            name: cpal-collector-code
