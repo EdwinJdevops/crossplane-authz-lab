@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CPAL challenge ledger, isolated from disposable kind test fixtures
+Parameters:
+  VerifierRoleName:
+    Type: String
+    AllowedPattern: '[A-Za-z0-9+=,.@_-]+'
+Resources:
+  ChallengeTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      AttributeDefinitions:
+        - AttributeName: nonce
+          AttributeType: S
+      KeySchema:
+        - AttributeName: nonce
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: CPAL
+  VerifierChallengePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: cpal-challenge-ledger-access
+      Roles:
+        - !Ref VerifierRoleName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt ChallengeTable.Arn
+Outputs:
+  TableName:
+    Value: !Ref ChallengeTable
+  TableArn:
+    Value: !GetAtt ChallengeTable.Arn
