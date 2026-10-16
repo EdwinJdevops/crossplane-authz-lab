@@ -93,14 +93,13 @@ spec:
               - serviceAccountToken:
                   path: token
                   expirationSeconds: 600
-                  audience: https://kubernetes.default.svc
         - name: kube-ca
           configMap:
             name: kube-root-ca.crt
         - name: tls
           secret:
             secretName: cpal-verifier-tls
-            defaultMode: 0400
+            defaultMode: 0444
         - name: state
           emptyDir: {}
 ---
