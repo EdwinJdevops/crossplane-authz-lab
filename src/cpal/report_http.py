@@ -13,7 +13,7 @@ from cpal.report_handler import handle_submission
 from cpal.report_protocol import MAX_REQUEST_BYTES
 
 
-def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expected_uid, audience, challenge_store):
+def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expected_uid, audience, challenge_store, verifier_token_path=None):
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
             if self.path not in ('/reports', '/challenge'):
@@ -36,7 +36,17 @@ def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expe
             if len(body) != int(length):
                 self.close_connection = True
                 return
-            config = dict(api_url=api_url, cluster_ca=cluster_ca, verifier_token=verifier_token, expected_username=expected_username, expected_uid=expected_uid, audience=audience, challenge_store=challenge_store, now=int(time.time()))
+            current_verifier_token = verifier_token
+            if verifier_token_path is not None:
+                try:
+                    with open(verifier_token_path, encoding='utf-8') as credential_file:
+                        current_verifier_token = credential_file.read().strip()
+                except OSError:
+                    current_verifier_token = ''
+            if not current_verifier_token:
+                self.send_error(503)
+                return
+            config = dict(api_url=api_url, cluster_ca=cluster_ca, verifier_token=current_verifier_token, expected_username=expected_username, expected_uid=expected_uid, audience=audience, challenge_store=challenge_store, now=int(time.time()))
             if self.path == '/challenge':
                 result = issue_authenticated_challenge(candidate_token=auth[7:], **config)
                 response = {'accepted': result.accepted, 'reason': result.reason}
