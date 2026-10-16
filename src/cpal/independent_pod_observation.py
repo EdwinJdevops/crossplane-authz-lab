@@ -23,7 +23,18 @@ def verify_pod_observation(*, report: bytes, api_url: str, cluster_ca: str, veri
     if not cluster_ca or not verifier_token:
         return False
     try:
-        report_obj = json.loads(report)
+        def reject_duplicate_keys(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError('duplicate JSON key')
+                result[key] = value
+            return result
+
+        def reject_nonfinite(value):
+            raise ValueError('nonfinite JSON value: ' + value)
+
+        report_obj = json.loads(report, object_pairs_hook=reject_duplicate_keys, parse_constant=reject_nonfinite)
         if not isinstance(report_obj, dict) or set(report_obj) != {'apiVersion', 'observation', 'execution_id'} or report_obj['apiVersion'] != 'cpal.dev/v1alpha1':
             return False
         observation = report_obj['observation']
@@ -38,7 +49,10 @@ def verify_pod_observation(*, report: bytes, api_url: str, cluster_ca: str, veri
         with urllib.request.build_opener(urllib.request.HTTPSHandler(context=context)).open(request, timeout=timeout) as response:
             if response.status != 200:
                 return False
-            live = json.load(response)
+            payload = response.read(65537)
+            if len(payload) > 65536:
+                return False
+            live = json.loads(payload, object_pairs_hook=reject_duplicate_keys, parse_constant=reject_nonfinite)
         metadata = live.get('metadata') if isinstance(live, dict) and live.get('kind') == 'Pod' else None
         return isinstance(metadata, dict) and metadata.get('namespace') == namespace and metadata.get('name') == pod_name and metadata.get('uid') == observation['uid'] and metadata.get('resourceVersion') == observation['resourceVersion']
     except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError):
