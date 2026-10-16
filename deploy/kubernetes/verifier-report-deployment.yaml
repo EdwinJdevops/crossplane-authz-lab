@@ -50,6 +50,8 @@ spec:
               value: /opt/cpal/src
             - name: PYTHONDONTWRITEBYTECODE
               value: '1'
+            - name: CPAL_OBSERVATION_POD
+              value: cpal-target
             - name: CPAL_NAMESPACE
               value: cpal-experiment
             - name: CPAL_COLLECTOR_SERVICE_ACCOUNT
@@ -100,6 +102,7 @@ spec:
               - {key: report_tls.py, path: src/cpal/report_tls.py}
               - {key: report_http.py, path: src/cpal/report_http.py}
               - {key: report_handler.py, path: src/cpal/report_handler.py}
+              - {key: independent_pod_observation.py, path: src/cpal/independent_pod_observation.py}
               - {key: report_protocol.py, path: src/cpal/report_protocol.py}
               - {key: challenge_issuer.py, path: src/cpal/challenge_issuer.py}
               - {key: challenge_store.py, path: src/cpal/challenge_store.py}
