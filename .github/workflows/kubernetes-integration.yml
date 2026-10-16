@@ -12,6 +12,11 @@ on:
       - 'scripts/check_live_challenge_report.py'
       - 'scripts/check_live_http_report.py'
       - 'scripts/check_tls_handshake.py'
+      - 'scripts/check_incluster_tls_report.sh'
+      - 'scripts/run_collector.py'
+      - 'scripts/run_verifier.py'
+      - 'src/cpal/collector_submit.py'
+      - 'src/cpal/challenge_issuer.py'
       - 'src/cpal/report_tls.py'
       - 'src/cpal/report_http.py'
       - 'src/cpal/report_handler.py'
@@ -97,3 +102,6 @@ jobs:
 
       - name: Verify real TLS handshake and untrusted certificate rejection
         run: PYTHONPATH=src python scripts/check_tls_handshake.py
+
+      - name: Exercise independent in-cluster collector and TLS verifier
+        run: bash scripts/check_incluster_tls_report.sh
