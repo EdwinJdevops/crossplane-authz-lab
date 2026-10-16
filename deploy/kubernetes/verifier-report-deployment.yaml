@@ -52,6 +52,8 @@ spec:
               value: '1'
             - name: CPAL_OBSERVATION_POD
               value: cpal-target
+            - name: CPAL_BIND_HOST
+              value: '0.0.0.0'
             - name: CPAL_NAMESPACE
               value: cpal-experiment
             - name: CPAL_COLLECTOR_SERVICE_ACCOUNT
