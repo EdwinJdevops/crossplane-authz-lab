@@ -19,6 +19,7 @@ kubectl -n "$ns" create configmap cpal-verifier-code \
   --from-file=src/cpal/challenge_verified_report.py --from-file=src/cpal/tokenreview_client.py \
   --from-file=src/cpal/tokenreview_result.py
 kubectl -n "$ns" create configmap cpal-collector-code --from-file=scripts/run_collector.py --from-file=src/cpal/collector_submit.py
+kubectl apply -f deploy/kubernetes/verifier-pod-read-rbac.yaml
 kubectl apply -f deploy/kubernetes/verifier-report-deployment.yaml
 if ! kubectl -n "$ns" rollout status deployment/cpal-verifier --timeout=180s; then
   kubectl -n "$ns" describe pods -l app=cpal-verifier; kubectl -n "$ns" logs deployment/cpal-verifier || true; exit 1
