@@ -15,6 +15,7 @@ def main():
         kubernetes_url=required('CPAL_KUBERNETES_URL'),
         kubernetes_ca=required('CPAL_KUBERNETES_CA'),
         token_path=required('CPAL_COLLECTOR_TOKEN_PATH'),
+        kubernetes_token_path=required('CPAL_KUBERNETES_TOKEN_PATH'),
         namespace=required('CPAL_NAMESPACE'),
         pod_name=required('CPAL_TARGET_POD'),
         verifier_url=required('CPAL_VERIFIER_URL'),
