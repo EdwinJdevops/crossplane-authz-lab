@@ -37,7 +37,10 @@ def main():
     if not name:
         raise SystemExit('CPAL_DYNAMODB_CHALLENGE_TABLE is required')
     import boto3
-    run(boto3.resource('dynamodb').Table(name))
+    endpoint = os.environ.get('CPAL_DYNAMODB_ENDPOINT_URL')
+    if endpoint and endpoint != 'http://localhost:8000':
+        raise SystemExit('local endpoint must be http://localhost:8000')
+    run(boto3.resource('dynamodb', endpoint_url=endpoint).Table(name))
 
 
 if __name__ == '__main__':
