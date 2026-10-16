@@ -27,7 +27,7 @@ class CollectorSubmitTests(unittest.TestCase):
         self.token_path = os.path.join(self.temp.name, 'token')
         with open(self.token_path, 'w') as f:
             f.write('projected-token')
-        self.args = dict(kubernetes_url='https://kubernetes.default.svc', kubernetes_ca='kube-ca', token_path=self.token_path, namespace='cpal-experiment', pod_name='cpal-target', verifier_url='https://verifier.cpal-experiment.svc', verifier_ca='verifier-ca', collector_service_account='cpal-collector')
+        self.args = dict(kubernetes_url='https://kubernetes.default.svc', kubernetes_ca='kube-ca', token_path=self.token_path, kubernetes_token_path=self.token_path, namespace='cpal-experiment', pod_name='cpal-target', verifier_url='https://verifier.cpal-experiment.svc', verifier_ca='verifier-ca', collector_service_account='cpal-collector')
 
     def test_rejects_plaintext_transport(self):
         with self.assertRaises(ValueError):
