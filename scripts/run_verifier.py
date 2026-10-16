@@ -27,7 +27,7 @@ def main():
     namespace = required('CPAL_NAMESPACE')
     service_account = required('CPAL_COLLECTOR_SERVICE_ACCOUNT')
     verifier_token_path = required('CPAL_VERIFIER_TOKEN_PATH')
-    server = make_tls_server(host='0.0.0.0', port=8443, certfile=required('CPAL_TLS_CERT'), keyfile=required('CPAL_TLS_KEY'), api_url=required('CPAL_KUBERNETES_URL'), cluster_ca=required('CPAL_KUBERNETES_CA'), verifier_token='', verifier_token_path=verifier_token_path, observation_namespace=namespace, observation_pod=required('CPAL_OBSERVATION_POD'), expected_username=f'system:serviceaccount:{namespace}:{service_account}', expected_uid=required('CPAL_COLLECTOR_UID'), audience='cpal-collector-verification', challenge_store=make_challenge_store())
+    server = make_tls_server(host=os.environ.get('CPAL_BIND_HOST', '127.0.0.1'), port=8443, certfile=required('CPAL_TLS_CERT'), keyfile=required('CPAL_TLS_KEY'), api_url=required('CPAL_KUBERNETES_URL'), cluster_ca=required('CPAL_KUBERNETES_CA'), verifier_token='', verifier_token_path=verifier_token_path, observation_namespace=namespace, observation_pod=required('CPAL_OBSERVATION_POD'), expected_username=f'system:serviceaccount:{namespace}:{service_account}', expected_uid=required('CPAL_COLLECTOR_UID'), audience='cpal-collector-verification', challenge_store=make_challenge_store())
     try:
         server.serve_forever()
     finally:
