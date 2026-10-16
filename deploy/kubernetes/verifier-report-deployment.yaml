@@ -28,9 +28,28 @@ spec:
           command: [python, /opt/cpal/scripts/run_verifier.py]
           ports:
             - containerPort: 8443
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8443
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8443
+            initialDelaySeconds: 10
+            periodSeconds: 10
           env:
             - name: PYTHONPATH
               value: /opt/cpal/src
+            - name: PYTHONDONTWRITEBYTECODE
+              value: '1'
             - name: CPAL_NAMESPACE
               value: cpal-experiment
             - name: CPAL_COLLECTOR_SERVICE_ACCOUNT
