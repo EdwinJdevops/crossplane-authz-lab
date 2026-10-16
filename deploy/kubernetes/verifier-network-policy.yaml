@@ -17,6 +17,8 @@ spec:
         - protocol: TCP
           port: 8443
   egress:
+    # Kubernetes API endpoint and DNS egress require cluster-specific
+    # destination CIDRs/selectors before applying in production.
     - ports:
         - protocol: TCP
           port: 443
