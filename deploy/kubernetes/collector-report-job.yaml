@@ -29,6 +29,8 @@ spec:
               value: /var/run/secrets/cpal/kubernetes-ca/ca.crt
             - name: CPAL_COLLECTOR_TOKEN_PATH
               value: /var/run/secrets/cpal/token/token
+            - name: CPAL_KUBERNETES_TOKEN_PATH
+              value: /var/run/secrets/cpal/api-token/token
             - name: CPAL_NAMESPACE
               value: cpal-experiment
             - name: CPAL_TARGET_POD
@@ -45,6 +47,9 @@ spec:
             capabilities:
               drop: [ALL]
           volumeMounts:
+            - name: api-token
+              mountPath: /var/run/secrets/cpal/api-token
+              readOnly: true
             - name: collector-token
               mountPath: /var/run/secrets/cpal/token
               readOnly: true
@@ -58,6 +63,12 @@ spec:
               mountPath: /opt/cpal
               readOnly: true
       volumes:
+        - name: api-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 600
         - name: collector-token
           projected:
             sources:
