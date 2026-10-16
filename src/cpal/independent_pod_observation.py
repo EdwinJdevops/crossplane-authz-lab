@@ -35,7 +35,7 @@ def verify_pod_observation(*, report: bytes, api_url: str, cluster_ca: str, veri
             return False
         context = ssl.create_default_context(cafile=cluster_ca)
         request = urllib.request.Request(api_url.rstrip('/') + f'/api/v1/namespaces/{namespace}/pods/{pod_name}', headers={'Authorization': 'Bearer ' + verifier_token, 'Accept': 'application/json'}, method='GET')
-        with urllib.request.urlopen(request, context=context, timeout=timeout) as response:
+        with urllib.request.build_opener(urllib.request.HTTPSHandler(context=context)).open(request, timeout=timeout) as response:
             if response.status != 200:
                 return False
             live = json.load(response)
