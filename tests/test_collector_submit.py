@@ -44,7 +44,7 @@ class CollectorSubmitTests(unittest.TestCase):
         requests = []
         challenge = {'accepted': True, 'nonce': 'nonce-from-verifier', 'execution_id': 'execution-from-verifier'}
         pod = {'kind': 'Pod', 'metadata': {'name': 'cpal-target', 'namespace': 'cpal-experiment', 'uid': 'real-uid', 'resourceVersion': '42'}}
-        def fake_urlopen(request, *, context, timeout):
+        def fake_urlopen(request, *, timeout):
             requests.append(request)
             if request.full_url.endswith('/challenge'):
                 return FakeResponse(challenge)
@@ -53,7 +53,8 @@ class CollectorSubmitTests(unittest.TestCase):
             if request.full_url.endswith('/reports'):
                 return FakeResponse({'accepted': True, 'reason': 'REPORT_ACCEPTED'})
             raise AssertionError(request.full_url)
-        with patch('cpal.collector_submit.ssl.create_default_context', side_effect=lambda cafile: cafile), patch('cpal.collector_submit.urllib.request.urlopen', side_effect=fake_urlopen):
+        with patch('cpal.collector_submit.ssl.create_default_context', side_effect=lambda cafile: cafile), patch('cpal.collector_submit.urllib.request.build_opener') as opener:
+            opener.return_value.open.side_effect = fake_urlopen
             result = collect_and_submit(**self.args)
         self.assertTrue(result['accepted'])
         self.assertEqual(len(requests), 3)
@@ -68,11 +69,12 @@ class CollectorSubmitTests(unittest.TestCase):
         self.assertEqual(submission['envelope']['report_sha256'], hashlib.sha256(report).hexdigest())
 
     def test_rejects_wrong_pod_identity(self):
-        def fake_urlopen(request, *, context, timeout):
+        def fake_urlopen(request, *, timeout):
             if request.full_url.endswith('/challenge'):
                 return FakeResponse({'accepted': True, 'nonce': 'nonce', 'execution_id': 'execution'})
             return FakeResponse({'kind': 'Pod', 'metadata': {'name': 'other', 'namespace': 'cpal-experiment'}})
-        with patch('cpal.collector_submit.ssl.create_default_context', return_value=object()), patch('cpal.collector_submit.urllib.request.urlopen', side_effect=fake_urlopen):
+        with patch('cpal.collector_submit.ssl.create_default_context', return_value=object()), patch('cpal.collector_submit.urllib.request.build_opener') as opener:
+            opener.return_value.open.side_effect = fake_urlopen
             with self.assertRaises(ValueError):
                 collect_and_submit(**self.args)
 
