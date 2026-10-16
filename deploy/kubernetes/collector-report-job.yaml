@@ -21,6 +21,8 @@ spec:
           image: python:3.12-slim
           command: [python, /opt/cpal/scripts/run_collector.py]
           env:
+            - name: PYTHONPATH
+              value: /opt/cpal/src
             - name: CPAL_KUBERNETES_URL
               value: https://kubernetes.default.svc
             - name: CPAL_KUBERNETES_CA
