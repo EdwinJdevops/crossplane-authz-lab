@@ -19,7 +19,7 @@ class FakeTable:
             raise ConditionalFailure()
         self.items[Item['nonce']] = Item.copy()
 
-    def update_item(self, *, Key, UpdateExpression, ConditionExpression, ExpressionAttributeValues):
+    def update_item(self, *, Key, UpdateExpression, ConditionExpression, ExpressionAttributeValues, ExpressionAttributeNames):
         if self.outage:
             raise ConnectionError('unavailable')
         item = self.items.get(Key['nonce'])
