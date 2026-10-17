@@ -30,7 +30,7 @@ def main():
         try:
             # Intentionally unauthenticated: must always deny; never issues ledger entries.
             req = urllib.request.Request(target, data=b'', method='POST')
-            with urllib.request.urlopen(req, timeout=args.timeout) as response:
+            with urllib.request.build_opener(urllib.request.HTTPSHandler()).open(req, timeout=args.timeout) as response:
                 status = response.status
         except urllib.error.HTTPError as exc:
             status = exc.code
