@@ -18,7 +18,7 @@ class AtomicTable:
             if Item['nonce'] in self.items:
                 raise ConditionalFailure()
             self.items[Item['nonce']] = dict(Item)
-    def update_item(self, *, Key, UpdateExpression, ConditionExpression, ExpressionAttributeValues):
+    def update_item(self, *, Key, UpdateExpression, ConditionExpression, ExpressionAttributeValues, ExpressionAttributeNames):
         with self.lock:
             item = self.items.get(Key['nonce'])
             values = ExpressionAttributeValues
