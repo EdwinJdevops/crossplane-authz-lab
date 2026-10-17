@@ -7,7 +7,7 @@ class AmbiguousWriteTable:
         self.consumed = False
     def put_item(self, *, Item, ConditionExpression):
         self.item = Item
-    def update_item(self, *, Key, UpdateExpression, ConditionExpression, ExpressionAttributeValues):
+    def update_item(self, *, Key, UpdateExpression, ConditionExpression, ExpressionAttributeValues, ExpressionAttributeNames):
         # Simulate a committed write followed by a lost acknowledgement.
         self.consumed = True
         raise TimeoutError('response lost after commit')
