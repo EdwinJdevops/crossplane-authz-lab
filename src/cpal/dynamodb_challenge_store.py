@@ -27,7 +27,7 @@ class DynamoDBChallengeStore:
             return False
         instant = int(time.time()) if now is None else now
         try:
-            self.table.update_item(Key={'nonce': nonce}, UpdateExpression='SET consumed = :true', ConditionExpression='principal = :principal AND execution_id = :execution AND expires_at > :now AND consumed = :false', ExpressionAttributeValues={':principal': principal, ':execution': execution_id, ':now': instant, ':false': False, ':true': True})
+            self.table.update_item(Key={'nonce': nonce}, UpdateExpression='SET #consumed = :true', ConditionExpression='principal = :principal AND execution_id = :execution AND expires_at > :now AND #consumed = :false', ExpressionAttributeNames={'#consumed': 'consumed'}, ExpressionAttributeValues={':principal': principal, ':execution': execution_id, ':now': instant, ':false': False, ':true': True})
             return True
         except Exception as exc:
             # Only a conditional mismatch is a normal replay/expiry rejection.
