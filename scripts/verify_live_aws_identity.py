@@ -9,7 +9,7 @@ import re
 
 
 def verify_identity(sts, *, expected_account, expected_arn):
-    if not re.fullmatch(r'[0-9]{12}', expected_account) or not expected_arn.startswith('arn:aws:sts::' + expected_account + ':assumed-role/'):
+    if not re.fullmatch(r'[0-9]{12}', expected_account) or not re.fullmatch(r'arn:aws(?:-us-gov|-cn)?:sts::' + expected_account + r':assumed-role/[A-Za-z0-9+=,.@_/-]+/[A-Za-z0-9+=,.@_/-]+', expected_arn):
         return False
     response = sts.get_caller_identity()
     return response.get('Account') == expected_account and response.get('Arn') == expected_arn and bool(response.get('UserId'))
