@@ -15,11 +15,14 @@ on:
       - 'scripts/check_incluster_tls_report.sh'
       - 'scripts/run_collector.py'
       - 'scripts/run_verifier.py'
+      - 'scripts/staging_load_probe.py'
       - 'src/cpal/collector_submit.py'
       - 'src/cpal/challenge_issuer.py'
       - 'src/cpal/report_tls.py'
       - 'src/cpal/report_http.py'
       - 'src/cpal/report_handler.py'
+      - 'src/cpal/aws_identity.py'
+      - 'src/cpal/independent_pod_observation.py'
       - 'src/cpal/challenge_store.py'
       - 'src/cpal/challenge_verified_report.py'
       - 'src/cpal/verified_report.py'
@@ -28,6 +31,14 @@ on:
       - 'src/cpal/kubernetes_*.py'
       - '.github/workflows/kubernetes-integration.yml'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'deploy/kubernetes/**'
+      - 'scripts/run_verifier.py'
+      - 'scripts/staging_load_probe.py'
+      - 'scripts/check_incluster_tls_report.sh'
+      - 'src/cpal/**'
+      - '.github/workflows/kubernetes-integration.yml'
 
 permissions:
   contents: read

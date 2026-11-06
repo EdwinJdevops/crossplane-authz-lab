@@ -32,7 +32,7 @@ def parse_submission(body: bytes) -> tuple[bytes, dict]:
         raise InvalidSubmission('INVALID_REQUEST_SIZE')
     try:
         obj = json.loads(body, parse_constant=lambda value: (_ for _ in ()).throw(ValueError('non-finite JSON constant')), object_pairs_hook=_reject_duplicate_keys)
-    except (UnicodeDecodeError, ValueError) as exc:
+    except (ValueError, RecursionError) as exc:
         raise InvalidSubmission('INVALID_JSON') from exc
     if not isinstance(obj, dict) or set(obj) != ALLOWED_KEYS:
         raise InvalidSubmission('INVALID_REQUEST_FIELDS')

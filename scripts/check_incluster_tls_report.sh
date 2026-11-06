@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 ns=cpal-experiment
 tmp="$(mktemp -d)"
-trap 'kubectl -n "$ns" delete job cpal-report-collector --ignore-not-found --wait=false >/dev/null 2>&1 || true; kubectl -n "$ns" delete deployment cpal-verifier --ignore-not-found --wait=false >/dev/null 2>&1 || true; kubectl -n "$ns" delete service cpal-verifier --ignore-not-found >/dev/null 2>&1 || true; kubectl -n "$ns" delete secret cpal-verifier-tls --ignore-not-found >/dev/null 2>&1 || true; kubectl -n "$ns" delete configmap cpal-verifier-code cpal-collector-code cpal-verifier-ca cpal-verifier-runtime --ignore-not-found >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
+trap 'if [[ -n "${forward_pid:-}" ]]; then kill "$forward_pid" 2>/dev/null || true; fi; kubectl -n "$ns" delete job cpal-report-collector --ignore-not-found --wait=false >/dev/null 2>&1 || true; kubectl -n "$ns" delete deployment cpal-verifier --ignore-not-found --wait=false >/dev/null 2>&1 || true; kubectl -n "$ns" delete service cpal-verifier --ignore-not-found >/dev/null 2>&1 || true; kubectl -n "$ns" delete secret cpal-verifier-tls --ignore-not-found >/dev/null 2>&1 || true; kubectl -n "$ns" delete configmap cpal-verifier-code cpal-collector-code cpal-verifier-ca cpal-verifier-runtime --ignore-not-found >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$tmp/ca.key" -out "$tmp/ca.crt" -days 1 -subj '/CN=CPAL disposable test CA' >/dev/null 2>&1
 openssl req -newkey rsa:2048 -nodes -keyout "$tmp/tls.key" -out "$tmp/tls.csr" -subj '/CN=cpal-verifier.cpal-experiment.svc' >/dev/null 2>&1
-printf 'subjectAltName=DNS:cpal-verifier.cpal-experiment.svc,DNS:cpal-verifier.cpal-experiment.svc.cluster.local\nextendedKeyUsage=serverAuth\n' > "$tmp/ext"
+printf 'subjectAltName=DNS:cpal-verifier.cpal-experiment.svc,DNS:cpal-verifier.cpal-experiment.svc.cluster.local,IP:127.0.0.1\nextendedKeyUsage=serverAuth\n' > "$tmp/ext"
 openssl x509 -req -in "$tmp/tls.csr" -CA "$tmp/ca.crt" -CAkey "$tmp/ca.key" -CAcreateserial -out "$tmp/tls.crt" -days 1 -extfile "$tmp/ext" >/dev/null 2>&1
 kubectl -n "$ns" create secret generic cpal-verifier-tls --from-file=tls.crt="$tmp/tls.crt" --from-file=tls.key="$tmp/tls.key"
 kubectl -n "$ns" create configmap cpal-verifier-ca --from-file=ca.crt="$tmp/ca.crt"
@@ -13,6 +14,7 @@ uid="$(kubectl -n "$ns" get serviceaccount cpal-collector -o jsonpath='{.metadat
 kubectl -n "$ns" create configmap cpal-verifier-runtime --from-literal=collector_uid="$uid"
 kubectl -n "$ns" create configmap cpal-verifier-code \
   --from-file=scripts/run_verifier.py \
+  --from-file=src/cpal/aws_identity.py \
   --from-file=src/cpal/report_tls.py --from-file=src/cpal/report_http.py \
   --from-file=src/cpal/report_handler.py --from-file=src/cpal/independent_pod_observation.py --from-file=src/cpal/report_protocol.py \
   --from-file=src/cpal/challenge_issuer.py --from-file=src/cpal/challenge_store.py \
@@ -30,3 +32,29 @@ if ! kubectl -n "$ns" wait --for=condition=complete job/cpal-report-collector --
 fi
 kubectl -n "$ns" logs job/cpal-report-collector | grep -Fx 'Collector report accepted by verifier'
 echo 'Independent collector Job submitted live Pod observation over trusted TLS to verifier Deployment'
+
+kubectl -n "$ns" port-forward --address 127.0.0.1 service/cpal-verifier :8443 >"$tmp/forward" 2>&1 &
+forward_pid=$!
+port=''
+for _ in {1..50}; do
+  port="$(sed -n 's/^Forwarding from 127\.0\.0\.1:\([0-9]*\) -> 8443$/\1/p' "$tmp/forward")"
+  if [[ -n "$port" ]]; then break; fi
+  sleep 0.2
+done
+[[ -n "$port" ]] || { cat "$tmp/forward"; exit 1; }
+kubectl -n "$ns" create token cpal-collector --audience=cpal-collector-verification --duration=10m > "$tmp/token"
+kubectl -n "$ns" get pod cpal-target -o json | python -c '
+import json, sys
+pod = json.load(sys.stdin)
+print(json.dumps({"kind": "Pod", **{key: pod["metadata"][key] for key in ("namespace", "name", "uid", "resourceVersion")}}))
+' > "$tmp/observation"
+probe=(python scripts/staging_load_probe.py --url "https://127.0.0.1:$port" --ca "$tmp/ca.crt"
+  --token-file "$tmp/token" --observation-file "$tmp/observation" --principal "system:serviceaccount:$ns:cpal-collector"
+  --requests 12 --workers 4 --timeout 15)
+"${probe[@]}"
+
+# Revoke only Pod read access in the disposable cluster, leaving TokenReview intact.
+kubectl delete -f deploy/kubernetes/verifier-pod-read-rbac.yaml
+"${probe[@]}" --expect-denial INDEPENDENT_OBSERVATION_MISMATCH
+kubectl apply -f deploy/kubernetes/verifier-pod-read-rbac.yaml
+"${probe[@]}"

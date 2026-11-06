@@ -4,6 +4,7 @@ Not suitable for independent hosts with separate files or a network filesystem.
 """
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 
@@ -12,7 +13,7 @@ class SQLiteReplayLedger:
         if path == ':memory:':
             raise ValueError('Replay ledger must be durable')
         self.path = str(Path(path))
-        with self._connect() as db:
+        with closing(self._connect()) as db:
             db.execute('CREATE TABLE IF NOT EXISTS consumed_nonces (nonce TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)')
 
     def _connect(self):
@@ -23,7 +24,7 @@ class SQLiteReplayLedger:
     def consume(self, nonce: str, expires_at: int, now: int) -> bool:
         if not isinstance(nonce, str) or not nonce or type(expires_at) is not int or type(now) is not int or expires_at <= now:
             return False
-        with self._connect() as db:
+        with closing(self._connect()) as db:
             db.execute('BEGIN IMMEDIATE')
             try:
                 # No deletion here: permanent nonce uniqueness avoids accepting a reused nonce after expiry.
