@@ -5,7 +5,6 @@ Do not expose via a Service, ingress, port-forward or public interface.
 """
 
 import json
-import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from cpal.challenge_issuer import issue_authenticated_challenge
@@ -13,7 +12,7 @@ from cpal.report_handler import handle_submission
 from cpal.report_protocol import MAX_REQUEST_BYTES
 
 
-def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expected_uid, audience, challenge_store, verifier_token_path=None, observation_namespace=None, observation_pod=None):
+def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expected_uid, audience, challenge_store, verifier_token_path=None, observation_namespace=None, observation_pod=None, sts=None, expected_aws_account=None, expected_aws_arn=None):
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
             if self.path not in ('/reports', '/challenge'):
@@ -46,14 +45,14 @@ def make_handler(*, api_url, cluster_ca, verifier_token, expected_username, expe
             if not current_verifier_token:
                 self.send_error(503)
                 return
-            config = dict(api_url=api_url, cluster_ca=cluster_ca, verifier_token=current_verifier_token, expected_username=expected_username, expected_uid=expected_uid, audience=audience, challenge_store=challenge_store, now=int(time.time()))
+            config = dict(api_url=api_url, cluster_ca=cluster_ca, verifier_token=current_verifier_token, expected_username=expected_username, expected_uid=expected_uid, audience=audience, challenge_store=challenge_store, now=None)
             if self.path == '/challenge':
                 result = issue_authenticated_challenge(candidate_token=auth[7:], **config)
                 response = {'accepted': result.accepted, 'reason': result.reason}
                 if result.accepted:
                     response.update(nonce=result.nonce, execution_id=result.execution_id, expires_at=result.expires_at)
             else:
-                result = handle_submission(body=body, bearer_token=auth[7:], observation_namespace=observation_namespace, observation_pod=observation_pod, **config)
+                result = handle_submission(body=body, bearer_token=auth[7:], observation_namespace=observation_namespace, observation_pod=observation_pod, sts=sts, expected_aws_account=expected_aws_account, expected_aws_arn=expected_aws_arn, **config)
                 response = {'accepted': result.accepted, 'reason': result.reason}
             payload = json.dumps(response).encode()
             self.send_response(200 if result.accepted else 403)

@@ -26,6 +26,6 @@ def issue_authenticated_challenge(*, candidate_token, api_url, cluster_ca, verif
     execution_id = secrets.token_urlsafe(24)
     try:
         challenge = challenge_store.issue(principal=expected_username, execution_id=execution_id, now=now)
-    except (OSError, ValueError):
+    except Exception:
         return ChallengeIssueResult(False, 'CHALLENGE_STORE_UNAVAILABLE')
     return ChallengeIssueResult(True, 'CHALLENGE_ISSUED', challenge.nonce, challenge.execution_id, challenge.expires_at)

@@ -6,6 +6,7 @@ an untrusted collector with access to verifier credentials or challenge DB.
 
 import hashlib
 import hmac
+import time
 from dataclasses import dataclass
 
 from cpal.tokenreview_client import authenticate_collector
@@ -17,7 +18,8 @@ class ChallengeReportDecision:
     reason: str
 
 
-def verify_challenged_report(*, report: bytes, envelope: dict, candidate_token: str, api_url: str, cluster_ca: str, verifier_token: str, expected_username: str, expected_uid: str, audience: str, challenge_store, now: int) -> ChallengeReportDecision:
+def verify_challenged_report(*, report: bytes, envelope: dict, candidate_token: str, api_url: str, cluster_ca: str, verifier_token: str, expected_username: str, expected_uid: str, audience: str, challenge_store, now: int | None, check_evidence=None) -> ChallengeReportDecision:
+    started = time.monotonic()
     identity = authenticate_collector(api_url=api_url, cluster_ca=cluster_ca, verifier_token=verifier_token, candidate_token=candidate_token, expected_username=expected_username, expected_uid=expected_uid, audience=audience)
     if not identity.authenticated or identity.principal != expected_username:
         return ChallengeReportDecision(False, 'IDENTITY_NOT_VERIFIED')
@@ -30,10 +32,15 @@ def verify_challenged_report(*, report: bytes, envelope: dict, candidate_token: 
         return ChallengeReportDecision(False, 'INVALID_ENVELOPE')
     if envelope.get('principal') != expected_username:
         return ChallengeReportDecision(False, 'PRINCIPAL_MISMATCH')
-    if not hmac.compare_digest(hashlib.sha256(report).hexdigest(), digest):
+    if not digest.isascii() or not hmac.compare_digest(hashlib.sha256(report).hexdigest(), digest):
         return ChallengeReportDecision(False, 'REPORT_DIGEST_MISMATCH')
+    if check_evidence is not None:
+        denial = check_evidence(report, execution)
+        if denial:
+            return ChallengeReportDecision(False, denial)
     try:
-        consumed = challenge_store.consume(nonce=nonce, principal=expected_username, execution_id=execution, now=now)
+        instant = None if now is None else now + int(time.monotonic() - started)
+        consumed = challenge_store.consume(nonce=nonce, principal=expected_username, execution_id=execution, now=instant)
     except Exception:
         return ChallengeReportDecision(False, 'CHALLENGE_STORE_UNAVAILABLE')
     if not consumed:

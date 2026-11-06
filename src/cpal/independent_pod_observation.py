@@ -6,14 +6,14 @@ integrity of arbitrary collector reports or an AWS authorization invariant.
 import json
 import re
 import ssl
-import urllib.error
 import urllib.request
 
+from cpal.tokenreview_client import NoRedirect
 
 _NAME = re.compile(r'[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\Z')
 
 
-def verify_pod_observation(*, report: bytes, api_url: str, cluster_ca: str, verifier_token: str, namespace: str, pod_name: str, timeout: int = 5) -> bool:
+def verify_pod_observation(*, report: bytes, api_url: str, cluster_ca: str, verifier_token: str, namespace: str, pod_name: str, execution_id: str | None = None, timeout: int = 5) -> bool:
     if not isinstance(report, bytes) or len(report) > 65536:
         return False
     if not isinstance(api_url, str) or not api_url.startswith('https://'):
@@ -37,6 +37,8 @@ def verify_pod_observation(*, report: bytes, api_url: str, cluster_ca: str, veri
         report_obj = json.loads(report, object_pairs_hook=reject_duplicate_keys, parse_constant=reject_nonfinite)
         if not isinstance(report_obj, dict) or set(report_obj) != {'apiVersion', 'observation', 'execution_id'} or report_obj['apiVersion'] != 'cpal.dev/v1alpha1':
             return False
+        if execution_id is not None and report_obj['execution_id'] != execution_id:
+            return False
         observation = report_obj['observation']
         if not isinstance(observation, dict) or set(observation) != {'kind', 'namespace', 'name', 'uid', 'resourceVersion'}:
             return False
@@ -46,7 +48,7 @@ def verify_pod_observation(*, report: bytes, api_url: str, cluster_ca: str, veri
             return False
         context = ssl.create_default_context(cafile=cluster_ca)
         request = urllib.request.Request(api_url.rstrip('/') + f'/api/v1/namespaces/{namespace}/pods/{pod_name}', headers={'Authorization': 'Bearer ' + verifier_token, 'Accept': 'application/json'}, method='GET')
-        with urllib.request.build_opener(urllib.request.HTTPSHandler(context=context)).open(request, timeout=timeout) as response:
+        with urllib.request.build_opener(urllib.request.HTTPSHandler(context=context), NoRedirect()).open(request, timeout=timeout) as response:
             if response.status != 200:
                 return False
             payload = response.read(65537)
@@ -54,6 +56,6 @@ def verify_pod_observation(*, report: bytes, api_url: str, cluster_ca: str, veri
                 return False
             live = json.loads(payload, object_pairs_hook=reject_duplicate_keys, parse_constant=reject_nonfinite)
         metadata = live.get('metadata') if isinstance(live, dict) and live.get('kind') == 'Pod' else None
-        return isinstance(metadata, dict) and metadata.get('namespace') == namespace and metadata.get('name') == pod_name and metadata.get('uid') == observation['uid'] and metadata.get('resourceVersion') == observation['resourceVersion']
-    except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError):
+        return isinstance(metadata, dict) and 'deletionTimestamp' not in metadata and metadata.get('namespace') == namespace and metadata.get('name') == pod_name and metadata.get('uid') == observation['uid'] and metadata.get('resourceVersion') == observation['resourceVersion']
+    except (OSError, ValueError, KeyError, TypeError, RecursionError):
         return False

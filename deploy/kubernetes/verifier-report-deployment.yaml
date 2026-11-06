@@ -46,6 +46,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           env:
+            - name: CPAL_KIND_FIXTURE
+              value: '1'
             - name: PYTHONPATH
               value: /opt/cpal/src
             - name: PYTHONDONTWRITEBYTECODE
@@ -101,6 +103,7 @@ spec:
             name: cpal-verifier-code
             items:
               - {key: run_verifier.py, path: scripts/run_verifier.py}
+              - {key: aws_identity.py, path: src/cpal/aws_identity.py}
               - {key: report_tls.py, path: src/cpal/report_tls.py}
               - {key: report_http.py, path: src/cpal/report_http.py}
               - {key: report_handler.py, path: src/cpal/report_handler.py}
