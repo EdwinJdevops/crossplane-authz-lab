@@ -22,6 +22,14 @@ class STSIdentityTests(unittest.TestCase):
     def test_iam_user_denied(self):
         arn='arn:aws:iam::123456789012:user/developer'
         self.assertFalse(verify_identity(StubSTS(self.account,arn),expected_account=self.account,expected_arn=arn))
+    def test_invalid_assumed_role_arn_denied(self):
+        malformed = 'arn:aws:sts::123456789012:assumed-role/'
+        self.assertFalse(verify_identity(StubSTS(self.account,malformed),expected_account=self.account,expected_arn=malformed))
+
+    def test_govcloud_partition_accepted(self):
+        arn = 'arn:aws-us-gov:sts::123456789012:assumed-role/cpal-verifier/session'
+        self.assertTrue(verify_identity(StubSTS(self.account,arn),expected_account=self.account,expected_arn=arn))
+
     def test_missing_session_id_denied(self):
         self.assertFalse(verify_identity(StubSTS(self.account,self.arn,''),expected_account=self.account,expected_arn=self.arn))
 
